@@ -22,6 +22,11 @@ lazy val xmlBackport = project
     version := sparkVersion,
     libraryDependencies ++= sparkDeps ++ Seq(
       "org.glassfish.jaxb" % "txw2" % "2.2.11",
-      "org.apache.ws.xmlschema" % "xmlschema-core" % "2.3.1"
-    )
+      "org.apache.ws.xmlschema" % "xmlschema-core" % "2.3.1",
+      "org.scalatest" %% "scalatest" % "3.2.19" % Test,
+      "org.scalatestplus" %% "scalacheck-1-18" % "3.2.19.0" % Test,
+      "org.scalacheck" %% "scalacheck" % "1.18.0" % Test,
+      "org.junit.jupiter" % "junit-jupiter" % "5.9.3" % Test
+    ),
+    Test / fork := true
   )

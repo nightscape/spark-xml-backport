@@ -18,22 +18,24 @@ package org.apache.spark.sql.execution.datasources.xml.parsers
 
 import java.nio.file.Files
 import java.sql.{Date, Timestamp}
-import java.time.{ZonedDateTime, ZoneId}
+import java.time.{ZoneId, ZonedDateTime}
 
+import org.apache.spark.sql.execution.datasources.xml._
 import org.apache.spark.sql.test.SharedSparkSession
 import org.apache.spark.sql.types._
+import scala.collection.JavaConverters._
 
 case class KnownData(
-    booleanDatum: Boolean,
-    dateDatum: Date,
-    decimalDatum: Decimal,
-    doubleDatum: Double,
-    integerDatum: Integer,
-    longDatum: Long,
-    stringDatum: String,
-    timeDatum: String,
-    timestampDatum: Timestamp,
-    nullDatum: Null
+  booleanDatum: Boolean,
+  dateDatum: Date,
+  decimalDatum: Decimal,
+  doubleDatum: Double,
+  integerDatum: Integer,
+  longDatum: Long,
+  stringDatum: String,
+  timeDatum: String,
+  timestampDatum: Timestamp,
+  nullDatum: Null
 )
 
 final class StaxXmlGeneratorSuite extends SharedSparkSession {
@@ -50,10 +52,11 @@ final class StaxXmlGeneratorSuite extends SharedSparkSession {
         longDatum = 1520828868,
         stringDatum = "test,breakdelimiter",
         timeDatum = "12:34:56",
-        timestampDatum = Timestamp.from(ZonedDateTime.of(2017, 12, 20, 21, 46, 54, 0,
-          ZoneId.of("UTC")).toInstant),
-        nullDatum = null),
-      KnownData(booleanDatum = false,
+        timestampDatum = Timestamp.from(ZonedDateTime.of(2017, 12, 20, 21, 46, 54, 0, ZoneId.of("UTC")).toInstant),
+        nullDatum = null
+      ),
+      KnownData(
+        booleanDatum = false,
         dateDatum = Date.valueOf("2016-12-19"),
         decimalDatum = Decimal(12.345, 10, 3),
         doubleDatum = 21.2121,
@@ -61,17 +64,18 @@ final class StaxXmlGeneratorSuite extends SharedSparkSession {
         longDatum = 1520828123,
         stringDatum = "breakdelimiter,test",
         timeDatum = "23:45:16",
-        timestampDatum = Timestamp.from(ZonedDateTime.of(2017, 12, 29, 17, 21, 49, 0,
-          ZoneId.of("America/New_York")).toInstant),
-        nullDatum = null)
+        timestampDatum =
+          Timestamp.from(ZonedDateTime.of(2017, 12, 29, 17, 21, 49, 0, ZoneId.of("America/New_York")).toInstant),
+        nullDatum = null
+      )
     )
 
     val df = dataset.toDF().orderBy("booleanDatum")
     val targetFile =
-      Files.createTempDirectory("StaxXmlGeneratorSuite").resolve("roundtrip.xml").toString
-    df.write.option("rowTag", "ROW").xml(targetFile)
+      Files.createTempDirectory("StaxXmlGeneratorSuite").resolve("roundtrip.xml")
+    df.write.option("rowTag", "ROW").xml(targetFile.toString)
     val newDf =
-      spark.read.option("rowTag", "ROW").schema(df.schema).xml(targetFile).orderBy("booleanDatum")
+      spark.read.option("rowTag", "ROW").schema(df.schema).xml(targetFile.toString).orderBy("booleanDatum")
     assert(df.collect().toSeq === newDf.collect().toSeq)
   }
 
