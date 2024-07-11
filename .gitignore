@@ -4,5 +4,6 @@
 .idea/
 .vscode/
 **/target/
+/out/
 /project/project/
 /project/metals.sbt
