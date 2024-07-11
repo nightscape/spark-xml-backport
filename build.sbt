@@ -3,13 +3,25 @@ inThisBuild(
     scalaVersion := "2.12.19",
     organization := "dev.mauch",
     githubWorkflowTargetTags ++= Seq("v*"),
-    githubWorkflowPublish := Seq(WorkflowStep.Sbt(commands = List("ci-release"), name = Some("Publish project"))),
+    githubWorkflowPublish := Seq(
+      WorkflowStep.Sbt(
+        commands = List("ci-release"),
+        name = Some("Publish project"),
+        env = Map(
+          "PGP_PASSPHRASE" -> "${{ secrets.PGP_PASSPHRASE }}",
+          "PGP_SECRET" -> "${{ secrets.PGP_SECRET }}",
+          "SONATYPE_PASSWORD" -> "${{ secrets.SONATYPE_PASSWORD }}",
+          "SONATYPE_USERNAME" -> "${{ secrets.SONATYPE_USERNAME }}"
+        )
+      )
+    ),
     githubWorkflowPublishTargetBranches := Seq(RefPredicate.Equals(Ref.Branch("main"))),
     githubWorkflowBuildMatrixAdditions := Map("spark-version" -> List("3.3.2")),
     githubWorkflowBuildSbtStepPreamble := Seq("++${{ matrix.scala }}", "-Dspark.version=${{ matrix.spark-version }}"),
     homepage := Some(url("https://github.com/nightscape/spark-xml-backport")),
     licenses := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
-    developers := List(Developer("nightscape", "Martin Mauch", "martin@mauch.dev", url("https://mauch.dev")))
+    developers := List(Developer("nightscape", "Martin Mauch", "martin@mauch.dev", url("https://mauch.dev"))),
+    sonatypeCredentialHost := "s01.oss.sonatype.org"
   )
 )
 val sparkVersion = sys.props.getOrElse("spark.version", "3.3.2")
@@ -28,5 +40,6 @@ lazy val xmlBackport = project
       "org.scalacheck" %% "scalacheck" % "1.18.0" % Test,
       "org.junit.jupiter" % "junit-jupiter" % "5.9.3" % Test
     ),
-    Test / fork := true
+    Test / fork := true,
+    sonatypeRepository := "https://s01.oss.sonatype.org/service/local"
   )
