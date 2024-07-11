@@ -27,6 +27,7 @@ import org.apache.spark.sql.catalyst.SQLConfHelper
 import org.apache.spark.sql.catalyst.util.DateTimeUtils.getZoneId
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.util.Utils
+import org.apache.spark.sql.AnalysisException
 
 trait SQLHelper extends SQLConfHelper {
 
@@ -46,4 +47,32 @@ trait SQLHelper extends SQLConfHelper {
     }
     sys.props.getOrElse("spark.test.home", sys.env("SPARK_HOME"))
   }
+
+  /** Sets all SQL configurations specified in `pairs`, calls `f`, and then restores all SQL configurations.
+    */
+  protected def withSQLConf[T](pairs: (String, String)*)(f: => T): T = {
+    val conf = SQLConf.get
+    val (keys, values) = pairs.unzip
+    val currentValues = keys.map { key =>
+      if (conf.contains(key)) {
+        Some(conf.getConfString(key))
+      } else {
+        None
+      }
+    }
+    keys.zip(values).foreach { case (k, v) =>
+      if (SQLConf.isStaticConfigKey(k)) {
+        throw new AnalysisException(errorClass = "_LEGACY_ERROR_TEMP_3050", messageParameters = Array(s"k -> $k"))
+      }
+      conf.setConfString(k, v)
+    }
+    try f
+    finally {
+      keys.zip(currentValues).foreach {
+        case (key, Some(value)) => conf.setConfString(key, value)
+        case (key, None) => conf.unsetConf(key)
+      }
+    }
+  }
+
 }
