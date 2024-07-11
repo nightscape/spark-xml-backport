@@ -25,6 +25,7 @@ import org.scalatest.BeforeAndAfterAll
 
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql.catalyst.xml.{StaxXmlParserUtils, XmlOptions}
+import javax.xml.stream.events.Attribute
 
 final class StaxXmlParserUtilsSuite extends SparkFunSuite with BeforeAndAfterAll {
 
@@ -51,7 +52,7 @@ final class StaxXmlParserUtilsSuite extends SparkFunSuite with BeforeAndAfterAll
     val event =
       StaxXmlParserUtils.skipUntil(parser, XMLStreamConstants.START_ELEMENT)
     val attributes =
-      event.asStartElement().getAttributes.asScala.toArray
+      event.asStartElement().getAttributes.asInstanceOf[java.util.Iterator[Attribute]].asScala.toArray
     val valuesMap =
       StaxXmlParserUtils.convertAttributesToValuesMap(attributes, new XmlOptions())
     assert(valuesMap === Map(s"${XmlOptions.DEFAULT_ATTRIBUTE_PREFIX}id" -> "2"))
@@ -98,9 +99,7 @@ final class StaxXmlParserUtilsSuite extends SparkFunSuite with BeforeAndAfterAll
     parser2.nextEvent()
     StaxXmlParserUtils.skipChildren(parser2, elementName2, xmlOptions)
     assert(parser2.peek().getEventType === XMLStreamConstants.END_ELEMENT)
-    assert(
-      StaxXmlParserUtils.getName(parser2.peek().asEndElement().getName, xmlOptions) == "info"
-    )
+    assert(StaxXmlParserUtils.getName(parser2.peek().asEndElement().getName, xmlOptions) == "info")
   }
 
   test("XML Input Factory disables DTD parsing") {
