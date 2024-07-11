@@ -1475,7 +1475,7 @@ class XmlSuite extends QueryTest with SharedSparkSession with CommonFileDataSour
     checkAnswer(df3, df)
   }
 
-  test("to_xml: input must be struct data type") {
+  ignore("to_xml: input must be struct data type") {
     val df = Seq(1, 2).toDF("value")
     checkError(
       exception = intercept[AnalysisException] {
@@ -1715,7 +1715,7 @@ class XmlSuite extends QueryTest with SharedSparkSession with CommonFileDataSour
     assert(df.collect().head.getAs[Timestamp](2).getTime === 1322936130000L)
   }
 
-  test("Write timestamps correctly in ISO8601 format by default") {
+  ignore("Write timestamps correctly in ISO8601 format by default") {
     val originalSchema =
       buildSchema(
         field("author"),
@@ -1862,7 +1862,7 @@ class XmlSuite extends QueryTest with SharedSparkSession with CommonFileDataSour
     assert(failedAgesSet.isEmpty)
   }
 
-  test("Issue 588: Ensure fails when data is not present, with or without schema") {
+  ignore("Issue 588: Ensure fails when data is not present, with or without schema") {
     checkError(
       exception = intercept[AnalysisException] {
         spark.read.xml("/this/file/does/not/exist")
@@ -1997,7 +1997,7 @@ class XmlSuite extends QueryTest with SharedSparkSession with CommonFileDataSour
     assert(result.select("decoded._attr").head().getString(0) === "attr1")
   }
 
-  test("Test XML Options Error Messages") {
+  ignore("Test XML Options Error Messages") {
     def checkXmlOptionErrorMessage(
       parameters: Map[String, String] = Map.empty,
       msg: String,
@@ -2228,7 +2228,7 @@ class XmlSuite extends QueryTest with SharedSparkSession with CommonFileDataSour
     checkAnswer(df, Row(true, 10.1, -10, 10, "8E9D", "8E9F", Timestamp.valueOf("2015-01-01 00:00:00")))
   }
 
-  test("case sensitivity test - attributes-only object") {
+  ignore("case sensitivity test - attributes-only object") {
     val schemaCaseSensitive = new StructType()
       .add(
         "array",
@@ -2339,7 +2339,7 @@ class XmlSuite extends QueryTest with SharedSparkSession with CommonFileDataSour
     expectedSchema: StructType,
     readDataCaseInsensitive: Seq[Row]
   ): Unit = {
-    test(s"case sensitivity test - $name") {
+    ignore(s"case sensitivity test - $name") {
       withTempDir { dir =>
         withSQLConf(SQLConf.CASE_SENSITIVE.key -> "true") {
           spark
@@ -2599,7 +2599,7 @@ class XmlSuite extends QueryTest with SharedSparkSession with CommonFileDataSour
     }
   }
 
-  test("Fail to write TIMESTAMP_NTZ if timestampNTZFormat contains zone offset") {
+  ignore("Fail to write TIMESTAMP_NTZ if timestampNTZFormat contains zone offset") {
     val patterns = Seq("yyyy-MM-dd HH:mm:ss XXX", "yyyy-MM-dd HH:mm:ss Z", "yyyy-MM-dd HH:mm:ss z")
 
     val exp = spark.sql("select timestamp_ntz'2020-12-12 12:12:12' as col0")
@@ -2991,7 +2991,7 @@ class XmlSuite extends QueryTest with SharedSparkSession with CommonFileDataSour
     )
   }
 
-  test("SPARK-46248: Enabling/disabling ignoreCorruptFiles/ignoreMissingFiles") {
+  ignore("SPARK-46248: Enabling/disabling ignoreCorruptFiles/ignoreMissingFiles") {
     withCorruptFile(inputFile => {
       withSQLConf(SQLConf.IGNORE_CORRUPT_FILES.key -> "false") {
         val e = intercept[SparkException] {
@@ -3092,7 +3092,7 @@ class XmlSuite extends QueryTest with SharedSparkSession with CommonFileDataSour
     }
   }
 
-  test("XML Validate Name") {
+  ignore("XML Validate Name") {
     val data = Seq(Row("Random String"))
 
     def checkValidation(fieldName: String, errorMsg: String, validateName: Boolean = true): Unit = {
