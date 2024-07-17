@@ -295,7 +295,8 @@ package object xml {
       */
     @scala.annotation.varargs
     def xml(paths: String*): DataFrame = {
-      // TODO: userSpecifiedSchema.foreach(checkXmlSchema)
+      val userSpecifiedSchema = readField[Option[StructType]]("userSpecifiedSchema")
+      userSpecifiedSchema.foreach(checkXmlSchema)
       dfr.format("xml").load(paths: _*)
     }
 
