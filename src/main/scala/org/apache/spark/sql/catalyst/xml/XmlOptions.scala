@@ -23,32 +23,36 @@ import javax.xml.stream.XMLInputFactory
 
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.{DataSourceOptions, FileSourceOptions}
-import org.apache.spark.sql.catalyst.util.{CaseInsensitiveMap, CompressionCodecs, DateFormatter, DateTimeUtils, ParseMode, PermissiveMode}
+import org.apache.spark.sql.catalyst.util.{
+  CaseInsensitiveMap,
+  CompressionCodecs,
+  DateFormatter,
+  DateTimeUtils,
+  ParseMode,
+  PermissiveMode
+}
 import org.apache.spark.sql.errors.{QueryCompilationErrors, QueryExecutionErrors}
 import org.apache.spark.sql.internal.{LegacyBehaviorPolicy, SQLConf}
 
-/**
- * Options for the XML data source.
- */
+/** Options for the XML data source.
+  */
 class XmlOptions(
-    val parameters: CaseInsensitiveMap[String],
-    defaultTimeZoneId: String,
-    defaultColumnNameOfCorruptRecord: String,
-    rowTagRequired: Boolean)
-  extends FileSourceOptions(parameters) with Logging {
+  val parameters: CaseInsensitiveMap[String],
+  defaultTimeZoneId: String,
+  defaultColumnNameOfCorruptRecord: String,
+  rowTagRequired: Boolean
+) extends FileSourceOptions(parameters)
+    with Logging {
 
   import XmlOptions._
 
   def this(
-      parameters: Map[String, String] = Map.empty,
-      defaultTimeZoneId: String = SQLConf.get.sessionLocalTimeZone,
-      defaultColumnNameOfCorruptRecord: String = SQLConf.get.columnNameOfCorruptRecord,
-      rowTagRequired: Boolean = false) = {
-    this(
-      CaseInsensitiveMap(parameters),
-      defaultTimeZoneId,
-      defaultColumnNameOfCorruptRecord,
-      rowTagRequired)
+    parameters: Map[String, String] = Map.empty,
+    defaultTimeZoneId: String = SQLConf.get.sessionLocalTimeZone,
+    defaultColumnNameOfCorruptRecord: String = SQLConf.get.columnNameOfCorruptRecord,
+    rowTagRequired: Boolean = false
+  ) = {
+    this(CaseInsensitiveMap(parameters), defaultTimeZoneId, defaultColumnNameOfCorruptRecord, rowTagRequired)
   }
 
   private def getBool(paramName: String, default: Boolean = false): Boolean = {
@@ -65,24 +69,23 @@ class XmlOptions(
   }
 
   val compressionCodec = parameters.get(COMPRESSION).map(CompressionCodecs.getCodecClassName)
-  val rowTagOpt = parameters.get(XmlOptions.ROW_TAG).map(_.trim)
+  val rowTagValue = parameters.get(XmlOptions.ROW_TAG)
+  val rowTagOpt = rowTagValue.map(_.trim)
 
-  if (rowTagRequired && rowTagOpt.isEmpty) {
+  if (rowTagRequired && (rowTagOpt.isEmpty && !rowTagValue.contains(""))) {
     throw QueryCompilationErrors.invalidStringLiteralParameter("xml", XmlOptions.ROW_TAG, "null", Some("string"))
   }
 
   val rowTag = rowTagOpt.getOrElse(XmlOptions.DEFAULT_ROW_TAG)
-  require(rowTag.nonEmpty, s"'$ROW_TAG' option should not be an empty string.")
-  require(!rowTag.startsWith("<") && !rowTag.endsWith(">"),
-          s"'$ROW_TAG' should not include angle brackets")
+  require(!rowTag.startsWith("<") && !rowTag.endsWith(">"), s"'$ROW_TAG' should not include angle brackets")
   val rootTag = parameters.getOrElse(ROOT_TAG, XmlOptions.DEFAULT_ROOT_TAG)
-  require(!rootTag.startsWith("<") && !rootTag.endsWith(">"),
-          s"'$ROOT_TAG' should not include angle brackets")
+  require(!rootTag.startsWith("<") && !rootTag.endsWith(">"), s"'$ROOT_TAG' should not include angle brackets")
   val declaration = parameters.getOrElse(DECLARATION, XmlOptions.DEFAULT_DECLARATION)
-  require(!declaration.startsWith("<") && !declaration.endsWith(">"),
-          s"'$DECLARATION' should not include angle brackets")
-  val arrayElementName = parameters.getOrElse(ARRAY_ELEMENT_NAME,
-    XmlOptions.DEFAULT_ARRAY_ELEMENT_NAME)
+  require(
+    !declaration.startsWith("<") && !declaration.endsWith(">"),
+    s"'$DECLARATION' should not include angle brackets"
+  )
+  val arrayElementName = parameters.getOrElse(ARRAY_ELEMENT_NAME, XmlOptions.DEFAULT_ARRAY_ELEMENT_NAME)
   val samplingRatio = parameters.get(SAMPLING_RATIO).map(_.toDouble).getOrElse(1.0)
   require(samplingRatio > 0, s"$SAMPLING_RATIO ($samplingRatio) should be greater than 0")
   val excludeAttributeFlag = getBool(EXCLUDE_ATTRIBUTE, false)
@@ -90,8 +93,7 @@ class XmlOptions(
     parameters.getOrElse(ATTRIBUTE_PREFIX, XmlOptions.DEFAULT_ATTRIBUTE_PREFIX)
   val valueTag = parameters.getOrElse(VALUE_TAG, XmlOptions.DEFAULT_VALUE_TAG)
   require(valueTag.nonEmpty, s"'$VALUE_TAG' option should not be empty string.")
-  require(valueTag != attributePrefix,
-    s"'$VALUE_TAG' and '$ATTRIBUTE_PREFIX' options should not be the same.")
+  require(valueTag != attributePrefix, s"'$VALUE_TAG' and '$ATTRIBUTE_PREFIX' options should not be the same.")
   val nullValue = parameters.getOrElse(NULL_VALUE, XmlOptions.DEFAULT_NULL_VALUE)
   val columnNameOfCorruptRecord =
     parameters.getOrElse(COLUMN_NAME_OF_CORRUPT_RECORD, defaultColumnNameOfCorruptRecord)
@@ -109,15 +111,14 @@ class XmlOptions(
   val indent = parameters.getOrElse(INDENT, DEFAULT_INDENT)
   val validateName = getBool(VALIDATE_NAME, true)
 
-  /**
-   * Infer columns with all valid date entries as date type (otherwise inferred as string or
-   * timestamp type) if schema inference is enabled.
-   *
-   * Enabled by default.
-   *
-   * Not compatible with legacyTimeParserPolicy == LEGACY since legacy date parser will accept
-   * extra trailing characters. Thus, disabled when legacyTimeParserPolicy == LEGACY
-   */
+  /** Infer columns with all valid date entries as date type (otherwise inferred as string or timestamp type) if schema
+    * inference is enabled.
+    *
+    * Enabled by default.
+    *
+    * Not compatible with legacyTimeParserPolicy == LEGACY since legacy date parser will accept extra trailing
+    * characters. Thus, disabled when legacyTimeParserPolicy == LEGACY
+    */
   val preferDate = {
     if (SQLConf.get.legacyTimeParserPolicy == LegacyBehaviorPolicy.LEGACY) {
       false
@@ -130,24 +131,21 @@ class XmlOptions(
   // Provide a default value for dateFormatInRead when preferDate. This ensures that the
   // Iso8601DateFormatter (with strict date parsing) is used for date inference
   val dateFormatInRead: Option[String] =
-  if (preferDate) {
-    Option(dateFormatOption.getOrElse(DateFormatter.defaultPattern))
-  } else {
-    dateFormatOption
-  }
+    if (preferDate) {
+      Option(dateFormatOption.getOrElse(DateFormatter.defaultPattern))
+    } else {
+      dateFormatOption
+    }
   val dateFormatInWrite: String = parameters.getOrElse(DATE_FORMAT, DateFormatter.defaultPattern)
-
 
   val timestampFormatInRead: Option[String] =
     if (SQLConf.get.legacyTimeParserPolicy == LegacyBehaviorPolicy.LEGACY) {
-      Some(parameters.getOrElse(TIMESTAMP_FORMAT,
-        s"${DateFormatter.defaultPattern}'T'HH:mm:ss.SSSXXX"))
+      Some(parameters.getOrElse(TIMESTAMP_FORMAT, s"${DateFormatter.defaultPattern}'T'HH:mm:ss.SSSXXX"))
     } else {
       parameters.get(TIMESTAMP_FORMAT)
     }
   val timestampFormatInWrite: String =
-    parameters.getOrElse(TIMESTAMP_FORMAT,
-      s"${DateFormatter.defaultPattern}'T'HH:mm:ss.SSSXXX")
+    parameters.getOrElse(TIMESTAMP_FORMAT, s"${DateFormatter.defaultPattern}'T'HH:mm:ss.SSSXXX")
 
   val timestampNTZFormatInRead: Option[String] = parameters.get(TIMESTAMP_NTZ_FORMAT)
   val timestampNTZFormatInWrite: String =
@@ -156,15 +154,14 @@ class XmlOptions(
   val timezone = parameters.get("timezone")
 
   val zoneId: ZoneId = DateTimeUtils.getZoneId(
-    parameters.getOrElse(DateTimeUtils.TIMEZONE_OPTION,
-      parameters.getOrElse(TIME_ZONE, defaultTimeZoneId)))
+    parameters.getOrElse(DateTimeUtils.TIMEZONE_OPTION, parameters.getOrElse(TIME_ZONE, defaultTimeZoneId))
+  )
 
   // A language tag in IETF BCP 47 format
   val locale: Locale = parameters.get(LOCALE).map(Locale.forLanguageTag).getOrElse(Locale.US)
 
   val multiLine = parameters.get(MULTI_LINE).map(_.toBoolean).getOrElse(true)
-  val charset = parameters.getOrElse(ENCODING,
-    parameters.getOrElse(CHARSET, XmlOptions.DEFAULT_CHARSET))
+  val charset = parameters.getOrElse(ENCODING, parameters.getOrElse(CHARSET, XmlOptions.DEFAULT_CHARSET))
 
   def buildXmlFactory(): XMLInputFactory = {
     XMLInputFactory.newInstance()

@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap
 import javax.xml.stream.XMLStreamException
 import scala.collection.mutable
 import mutable.ArraySeq
-import scala.io.Source
+import scala.io.{Codec, Source}
 import scala.collection.JavaConverters._
 import org.apache.commons.lang3.exception.ExceptionUtils
 import org.apache.hadoop.conf.Configuration
@@ -462,6 +462,31 @@ class XmlSuite extends QueryTest with SharedSparkSession with CommonFileDataSour
       .xml(copyFilePath.toString)
     assert(booksCopy.count() === books.count())
     assert(booksCopy.collect().map(_.toString).toSet === books.collect().map(_.toString).toSet)
+  }
+
+  test("DSL save with empty rowTag") {
+    val copyFilePath = getEmptyTempDir().resolve("books-copy.xml")
+
+    val books = spark.read
+      .option("rowTag", "book")
+      .xml(getTestResourcePath(resDir + "books-complicated.xml"))
+    books
+      .drop("_id")
+      .write
+      .options(Map("rootTag" -> "books", "rowTag" -> ""))
+      .xml(copyFilePath.toString)
+    import java.nio.file.{FileSystems, Files}
+
+    import scala.collection.JavaConverters._
+
+    val files = Files.list(copyFilePath).iterator().asScala.toVector
+    println("=" * 80)
+    files.foreach { file =>
+      println(file)
+      val content = scala.io.Source.fromFile(file.toFile)(Codec.ISO8859).mkString
+      println(content)
+    }
+
   }
 
   test("DSL save with declaration") {
@@ -1023,12 +1048,7 @@ class XmlSuite extends QueryTest with SharedSparkSession with CommonFileDataSour
     }
   }
 
-  test("Empty string not allowed for rowTag, attributePrefix and valueTag.") {
-    val messageOne = intercept[IllegalArgumentException] {
-      spark.read.option("rowTag", "").xml(getTestResourcePath(resDir + "cars.xml"))
-    }.getMessage
-    assert(messageOne === "requirement failed: 'rowTag' option should not be an empty string.")
-
+  test("Empty string not allowed for attributePrefix and valueTag.") {
     val messageThree = intercept[IllegalArgumentException] {
       spark.read
         .option("rowTag", "ROW")
