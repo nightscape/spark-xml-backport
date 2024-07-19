@@ -32,14 +32,9 @@ import org.apache.spark.sql.catalyst.util.LegacyDateFormats.FAST_DATE_FORMAT
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
 
-class StaxXmlGenerator(
-    schema: StructType,
-    writer: Writer,
-    options: XmlOptions,
-    validateStructure: Boolean = true) {
+class StaxXmlGenerator(schema: StructType, writer: Writer, options: XmlOptions, validateStructure: Boolean = true) {
 
-  require(options.attributePrefix.nonEmpty,
-    "'attributePrefix' option should not be empty string.")
+  require(options.attributePrefix.nonEmpty, "'attributePrefix' option should not be empty string.")
   private val indentDisabled = options.indent == ""
 
   private val timestampFormatter = TimestampFormatter(
@@ -47,20 +42,19 @@ class StaxXmlGenerator(
     options.zoneId,
     options.locale,
     legacyFormat = FAST_DATE_FORMAT,
-    isParsing = false)
+    isParsing = false
+  )
 
   private val timestampNTZFormatter = TimestampFormatter(
     options.timestampNTZFormatInWrite,
     options.zoneId,
     legacyFormat = FAST_DATE_FORMAT,
     isParsing = false,
-    forTimestampNTZ = true)
+    forTimestampNTZ = true
+  )
 
-  private val dateFormatter = DateFormatter(
-    options.dateFormatInWrite,
-    options.locale,
-    legacyFormat = FAST_DATE_FORMAT,
-    isParsing = false)
+  private val dateFormatter =
+    DateFormatter(options.dateFormatInWrite, options.locale, legacyFormat = FAST_DATE_FORMAT, isParsing = false)
 
   private val gen = {
     val factory = XMLOutputFactory.newInstance()
@@ -118,12 +112,11 @@ class StaxXmlGenerator(
     writer.close()
   }
 
-  /**
-   * Transforms a single Row to XML
-   *
-   * @param row
-   * The row to convert
-   */
+  /** Transforms a single Row to XML
+    *
+    * @param row
+    *   The row to convert
+    */
   def write(row: InternalRow): Unit = {
     writeChildElement(options.rowTag, schema, row)
     if (indentDisabled) {
@@ -139,6 +132,8 @@ class StaxXmlGenerator(
     case (_, _, _) if name == options.valueTag =>
       // If this is meant to be value but in no child, write only a value
       writeElement(dt, v, options)
+    case ("", _, _) =>
+      writeElement(dt, v, options)
     case (_, _, _) =>
       gen.writeStartElement(name)
       writeElement(dt, v, options)
@@ -148,8 +143,7 @@ class StaxXmlGenerator(
   def writeChild(name: String, dt: DataType, v: Any): Unit = {
     (dt, v) match {
       // If this is meant to be attribute, write an attribute
-      case (_, null) | (NullType, _)
-        if name.startsWith(options.attributePrefix) && name != options.valueTag =>
+      case (_, null) | (NullType, _) if name.startsWith(options.attributePrefix) && name != options.valueTag =>
         Option(options.nullValue).foreach {
           gen.writeAttribute(name.substring(options.attributePrefix.length), _)
         }
@@ -222,10 +216,8 @@ class StaxXmlGenerator(
     case (_, _) =>
       throw new SparkIllegalArgumentException(
         errorClass = "_LEGACY_ERROR_TEMP_3238",
-        messageParameters = Array(
-          ("v" -> v).toString,
-          ("class" -> v.getClass).toString,
-          ("dt" -> dt).toString))
+        messageParameters = Array(("v" -> v).toString, ("class" -> v.getClass).toString, ("dt" -> dt).toString)
+      )
   }
 
   def writeMapData(mapType: MapType, map: MapData): Unit = {
