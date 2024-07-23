@@ -72,6 +72,11 @@ class StaxXmlGenerator(schema: StructType, writer: Writer, options: XmlOptions, 
   }
 
   private var rootElementWritten: Boolean = false
+  def writeLineEnding(indentDisabled: Boolean = this.indentDisabled): Unit = {
+    if (indentDisabled) {
+      gen.writeCharacters(options.lineEnding)
+    }
+  }
   def writeDeclaration(): Unit = {
     // Allow a root tag to be like "rootTag foo='bar'"
     // This is hacky; won't deal correctly with spaces in attributes, but want
@@ -90,7 +95,7 @@ class StaxXmlGenerator(schema: StructType, writer: Writer, options: XmlOptions, 
     val declaration = options.declaration
     if (declaration != null && declaration.nonEmpty) {
       gen.writeProcessingInstruction("xml", declaration)
-      gen.writeCharacters("\n")
+      writeLineEnding(indentDisabled = false)
     }
     gen.writeStartElement(rootElementName)
     val metaNamespace = "xmlns:"
@@ -107,9 +112,7 @@ class StaxXmlGenerator(schema: StructType, writer: Writer, options: XmlOptions, 
         case Array(local) => gen.writeAttribute(local, v)
       }
     }
-    if (indentDisabled) {
-      gen.writeCharacters("\n")
-    }
+    writeLineEnding()
     rootElementWritten = true
   }
 
@@ -130,9 +133,7 @@ class StaxXmlGenerator(schema: StructType, writer: Writer, options: XmlOptions, 
     */
   def write(row: InternalRow): Unit = {
     writeChildElement(options.rowTag, schema, row)
-    if (indentDisabled) {
-      gen.writeCharacters("\n")
-    }
+    writeLineEnding()
   }
 
   def writeChildElement(name: String, dt: DataType, v: Any): Unit = (name, dt, v) match {
