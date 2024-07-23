@@ -1559,6 +1559,24 @@ class XmlSuite extends QueryTest with SharedSparkSession with CommonFileDataSour
     assert(result.head.getString(0).contains("<comment foo=\"bar\">No</comment>"))
   }
 
+  test("custom line ending") {
+    val xmlPath = getEmptyTempDir().resolve("simple_attributes")
+    val df = spark.createDataFrame(Seq((42, "foo"))).toDF("number", "value").repartition(1)
+    df.write
+      .option("rowTag", "ROW")
+      .option("rootTag", "root")
+      .option("lineEnding", "\r\n")
+      .xml(xmlPath.toString)
+
+    val xmlFile =
+      Files.list(xmlPath).iterator.asScala.filter(_.getFileName.toString.startsWith("part-")).next()
+    val source = Source.fromFile(xmlFile.toFile)
+    val content = source.mkString
+    val newLinesFound = "\n".r.findAllIn(content).length
+    assert(newLinesFound > 0)
+    assert("\r".r.findAllIn(content).length === newLinesFound)
+  }
+
   test("rootTag with simple attributes") {
     val xmlPath = getEmptyTempDir().resolve("simple_attributes")
     val df = spark.createDataFrame(Seq((42, "foo"))).toDF("number", "value").repartition(1)

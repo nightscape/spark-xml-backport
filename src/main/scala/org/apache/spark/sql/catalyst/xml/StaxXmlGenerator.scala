@@ -19,12 +19,9 @@ package org.apache.spark.sql.catalyst.xml
 import java.io.Writer
 import java.sql.Timestamp
 import javax.xml.stream.XMLOutputFactory
-
 import scala.collection.Map
-
-import com.sun.xml.txw2.output.IndentingXMLStreamWriter
+import com.sun.xml.txw2.output.{CustomXMLStreamWriter, IndentingXMLStreamWriter}
 import org.apache.hadoop.shaded.com.ctc.wstx.api.WstxOutputProperties
-
 import org.apache.spark.SparkIllegalArgumentException
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.util.{ArrayData, DateFormatter, DateTimeUtils, MapData, TimestampFormatter}
@@ -61,10 +58,10 @@ class StaxXmlGenerator(schema: StructType, writer: Writer, options: XmlOptions, 
     // to_xml disables structure validation to allow multiple root tags
     factory.setProperty(WstxOutputProperties.P_OUTPUT_VALIDATE_STRUCTURE, validateStructure)
     factory.setProperty(WstxOutputProperties.P_OUTPUT_VALIDATE_NAMES, options.validateName)
+    factory.setProperty(WstxOutputProperties.P_OUTPUT_ESCAPE_CR, !options.lineEnding.contains("\r"))
     val xmlWriter = factory.createXMLStreamWriter(writer)
-    if (!indentDisabled) {
-      val indentingXmlWriter = new IndentingXMLStreamWriter(xmlWriter)
-      indentingXmlWriter.setIndentStep(options.indent)
+    if (!indentDisabled || options.lineEnding != "\n") {
+      val indentingXmlWriter = new CustomXMLStreamWriter(xmlWriter, options)
       indentingXmlWriter
     } else {
       xmlWriter
@@ -72,6 +69,9 @@ class StaxXmlGenerator(schema: StructType, writer: Writer, options: XmlOptions, 
   }
 
   private var rootElementWritten: Boolean = false
+  def writeLineEnding(indentDisabled: Boolean = this.indentDisabled): Unit = {
+    gen.writeCharacters(options.lineEnding)
+  }
   def writeDeclaration(): Unit = {
     // Allow a root tag to be like "rootTag foo='bar'"
     // This is hacky; won't deal correctly with spaces in attributes, but want
@@ -90,7 +90,7 @@ class StaxXmlGenerator(schema: StructType, writer: Writer, options: XmlOptions, 
     val declaration = options.declaration
     if (declaration != null && declaration.nonEmpty) {
       gen.writeProcessingInstruction("xml", declaration)
-      gen.writeCharacters("\n")
+      writeLineEnding(indentDisabled = false)
     }
     gen.writeStartElement(rootElementName)
     val metaNamespace = "xmlns:"
@@ -107,9 +107,7 @@ class StaxXmlGenerator(schema: StructType, writer: Writer, options: XmlOptions, 
         case Array(local) => gen.writeAttribute(local, v)
       }
     }
-    if (indentDisabled) {
-      gen.writeCharacters("\n")
-    }
+    writeLineEnding()
     rootElementWritten = true
   }
 
@@ -130,9 +128,7 @@ class StaxXmlGenerator(schema: StructType, writer: Writer, options: XmlOptions, 
     */
   def write(row: InternalRow): Unit = {
     writeChildElement(options.rowTag, schema, row)
-    if (indentDisabled) {
-      gen.writeCharacters("\n")
-    }
+    writeLineEnding()
   }
 
   def writeChildElement(name: String, dt: DataType, v: Any): Unit = (name, dt, v) match {
