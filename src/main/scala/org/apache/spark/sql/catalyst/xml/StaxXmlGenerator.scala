@@ -93,8 +93,19 @@ class StaxXmlGenerator(schema: StructType, writer: Writer, options: XmlOptions, 
       gen.writeCharacters("\n")
     }
     gen.writeStartElement(rootElementName)
-    rootAttributes.foreach { case (k, v) =>
-      gen.writeAttribute(k, v)
+    val metaNamespace = "xmlns:"
+    val (namespaceAttributes, normalAttributes) = rootAttributes.partition { case (k, _) =>
+      k.startsWith(metaNamespace)
+    }
+    val namespaces = namespaceAttributes.collect { case (k, v) => k.substring(metaNamespace.length) -> v }
+    namespaces.foreach { case (k, v) =>
+      gen.writeNamespace(k, v)
+    }
+    normalAttributes.foreach { case (k, v) =>
+      k.split(":") match {
+        case Array(prefix, local) => gen.writeAttribute(namespaces(prefix), local, v)
+        case Array(local) => gen.writeAttribute(local, v)
+      }
     }
     if (indentDisabled) {
       gen.writeCharacters("\n")
