@@ -22,6 +22,7 @@ import javax.xml.stream.XMLOutputFactory
 import scala.collection.Map
 import com.sun.xml.txw2.output.{CustomXMLStreamWriter, IndentingXMLStreamWriter}
 import org.apache.hadoop.shaded.com.ctc.wstx.api.WstxOutputProperties
+import org.apache.hadoop.shaded.com.ctc.wstx.stax.WstxOutputFactory
 import org.apache.spark.SparkIllegalArgumentException
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.util.{ArrayData, DateFormatter, DateTimeUtils, MapData, TimestampFormatter}
@@ -54,7 +55,7 @@ class StaxXmlGenerator(schema: StructType, writer: Writer, options: XmlOptions, 
     DateFormatter(options.dateFormatInWrite, options.locale, legacyFormat = FAST_DATE_FORMAT, isParsing = false)
 
   private val gen = {
-    val factory = XMLOutputFactory.newInstance()
+    val factory = new WstxOutputFactory()
     // to_xml disables structure validation to allow multiple root tags
     factory.setProperty(WstxOutputProperties.P_OUTPUT_VALIDATE_STRUCTURE, validateStructure)
     factory.setProperty(WstxOutputProperties.P_OUTPUT_VALIDATE_NAMES, options.validateName)
