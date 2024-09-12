@@ -1,11 +1,9 @@
-package com.sun.xml.txw2.output
+package org.apache.spark.sql.catalyst.xml
 
-import org.apache.spark.sql.catalyst.xml.XmlOptions
-
-import javax.xml.stream.XMLStreamException
-import javax.xml.stream.XMLStreamWriter
 import java.util
-import java.util.Stack
+import javax.xml.namespace.NamespaceContext
+import javax.xml.stream.{XMLStreamException, XMLStreamWriter}
+
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -55,7 +53,7 @@ object CustomXMLStreamWriter {
   private val SEEN_DATA = new AnyRef
 }
 
-class CustomXMLStreamWriter(writer: XMLStreamWriter, options: XmlOptions) extends DelegatingXMLStreamWriter(writer) {
+class CustomXMLStreamWriter(writer: XMLStreamWriter, options: XmlOptions) extends XMLStreamWriter {
   private var state = CustomXMLStreamWriter.SEEN_NOTHING
   private val stateStack = new util.Stack[AnyRef]
   private var indentStep = options.indent
@@ -79,7 +77,7 @@ class CustomXMLStreamWriter(writer: XMLStreamWriter, options: XmlOptions) extend
   private def onStartElement(): Unit = {
     stateStack.push(CustomXMLStreamWriter.SEEN_ELEMENT)
     state = CustomXMLStreamWriter.SEEN_NOTHING
-    if (depth > 0) super.writeCharacters(options.lineEnding)
+    if (depth > 0) writer.writeCharacters(options.lineEnding)
     doIndent()
     depth += 1
   }
@@ -88,7 +86,7 @@ class CustomXMLStreamWriter(writer: XMLStreamWriter, options: XmlOptions) extend
   private def onEndElement(): Unit = {
     depth -= 1
     if (state eq CustomXMLStreamWriter.SEEN_ELEMENT) {
-      super.writeCharacters(options.lineEnding)
+      writer.writeCharacters(options.lineEnding)
       doIndent()
     }
     state = stateStack.pop
@@ -97,7 +95,7 @@ class CustomXMLStreamWriter(writer: XMLStreamWriter, options: XmlOptions) extend
   @throws[XMLStreamException]
   private def onEmptyElement(): Unit = {
     state = CustomXMLStreamWriter.SEEN_ELEMENT
-    if (depth > 0) super.writeCharacters(options.lineEnding)
+    if (depth > 0) writer.writeCharacters(options.lineEnding)
     doIndent()
   }
 
@@ -110,85 +108,105 @@ class CustomXMLStreamWriter(writer: XMLStreamWriter, options: XmlOptions) extend
   @throws[XMLStreamException]
   private def doIndent(): Unit = {
     if (depth > 0) for (i <- 0 until depth) {
-      super.writeCharacters(indentStep)
+      writer.writeCharacters(indentStep)
     }
   }
 
   @throws[XMLStreamException]
   override def writeStartDocument(): Unit = {
-    super.writeStartDocument()
-    super.writeCharacters(options.lineEnding)
+    writer.writeStartDocument()
+    writer.writeCharacters(options.lineEnding)
   }
 
   @throws[XMLStreamException]
   override def writeStartDocument(version: String): Unit = {
-    super.writeStartDocument(version)
-    super.writeCharacters(options.lineEnding)
+    writer.writeStartDocument(version)
+    writer.writeCharacters(options.lineEnding)
   }
 
   @throws[XMLStreamException]
   override def writeStartDocument(encoding: String, version: String): Unit = {
-    super.writeStartDocument(encoding, version)
-    super.writeCharacters(options.lineEnding)
+    writer.writeStartDocument(encoding, version)
+    writer.writeCharacters(options.lineEnding)
   }
 
   @throws[XMLStreamException]
   override def writeStartElement(localName: String): Unit = {
     onStartElement()
-    super.writeStartElement(localName)
+    writer.writeStartElement(localName)
   }
 
   @throws[XMLStreamException]
   override def writeStartElement(namespaceURI: String, localName: String): Unit = {
     onStartElement()
-    super.writeStartElement(namespaceURI, localName)
+    writer.writeStartElement(namespaceURI, localName)
   }
 
   @throws[XMLStreamException]
   override def writeStartElement(prefix: String, localName: String, namespaceURI: String): Unit = {
     onStartElement()
-    super.writeStartElement(prefix, localName, namespaceURI)
+    writer.writeStartElement(prefix, localName, namespaceURI)
   }
 
   @throws[XMLStreamException]
   override def writeEmptyElement(namespaceURI: String, localName: String): Unit = {
     onEmptyElement()
-    super.writeEmptyElement(namespaceURI, localName)
+    writer.writeEmptyElement(namespaceURI, localName)
   }
 
   @throws[XMLStreamException]
   override def writeEmptyElement(prefix: String, localName: String, namespaceURI: String): Unit = {
     onEmptyElement()
-    super.writeEmptyElement(prefix, localName, namespaceURI)
+    writer.writeEmptyElement(prefix, localName, namespaceURI)
   }
 
   @throws[XMLStreamException]
   override def writeEmptyElement(localName: String): Unit = {
     onEmptyElement()
-    super.writeEmptyElement(localName)
+    writer.writeEmptyElement(localName)
   }
 
   @throws[XMLStreamException]
   override def writeEndElement(): Unit = {
     onEndElement()
-    super.writeEndElement()
+    writer.writeEndElement()
   }
 
   @throws[XMLStreamException]
   override def writeCharacters(text: String): Unit = {
     state = CustomXMLStreamWriter.SEEN_DATA
-    super.writeCharacters(text)
+    writer.writeCharacters(text)
   }
 
   @throws[XMLStreamException]
   override def writeCharacters(text: Array[Char], start: Int, len: Int): Unit = {
     state = CustomXMLStreamWriter.SEEN_DATA
-    super.writeCharacters(text, start, len)
+    writer.writeCharacters(text, start, len)
   }
 
   @throws[XMLStreamException]
   override def writeCData(data: String): Unit = {
     state = CustomXMLStreamWriter.SEEN_DATA
-    super.writeCData(data)
+    writer.writeCData(data)
   }
+
+  override def writeEndDocument(): Unit = writer.writeEndDocument()
+  override def close(): Unit = writer.close()
+  override def flush(): Unit = writer.flush()
+  override def writeAttribute(localName: String, value: String): Unit = writer.writeAttribute(localName, value)
+  override def writeAttribute(prefix: String, namespaceURI: String, localName: String, value: String): Unit = writer.writeAttribute(prefix, namespaceURI, localName, value)
+  override def writeAttribute(namespaceURI: String, localName: String, value: String): Unit = writer.writeAttribute(namespaceURI, localName, value)
+  override def writeNamespace(prefix: String, namespaceURI: String): Unit = writer.writeNamespace(prefix, namespaceURI)
+  override def writeDefaultNamespace(namespaceURI: String): Unit = writer.writeDefaultNamespace(namespaceURI)
+  override def writeComment(data: String): Unit = writer.writeComment(data)
+  override def writeProcessingInstruction(target: String): Unit = writer.writeProcessingInstruction(target)
+  override def writeProcessingInstruction(target: String, data: String): Unit = writer.writeProcessingInstruction(target, data)
+  override def writeDTD(dtd: String): Unit = writer.writeDTD(dtd)
+  override def writeEntityRef(name: String): Unit = writer.writeEntityRef(name)
+  override def getPrefix(uri: String): String = writer.getPrefix(uri)
+  override def setPrefix(prefix: String, uri: String): Unit = writer.setPrefix(prefix, uri)
+  override def setDefaultNamespace(uri: String): Unit = writer.setDefaultNamespace(uri)
+  override def setNamespaceContext(context: NamespaceContext): Unit = writer.setNamespaceContext(context)
+  override def getNamespaceContext: NamespaceContext = writer.getNamespaceContext
+  override def getProperty(name: String): AnyRef = writer.getProperty(name)
 }

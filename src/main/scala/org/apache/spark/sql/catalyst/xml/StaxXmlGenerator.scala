@@ -18,9 +18,7 @@ package org.apache.spark.sql.catalyst.xml
 
 import java.io.Writer
 import java.sql.Timestamp
-import javax.xml.stream.XMLOutputFactory
-import scala.collection.Map
-import com.sun.xml.txw2.output.{CustomXMLStreamWriter, IndentingXMLStreamWriter}
+
 import org.apache.hadoop.shaded.com.ctc.wstx.api.WstxOutputProperties
 import org.apache.hadoop.shaded.com.ctc.wstx.stax.WstxOutputFactory
 import org.apache.spark.SparkIllegalArgumentException
