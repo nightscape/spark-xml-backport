@@ -1562,19 +1562,22 @@ class XmlSuite extends QueryTest with SharedSparkSession with CommonFileDataSour
   test("custom line ending") {
     val xmlPath = getEmptyTempDir().resolve("simple_attributes")
     val df = spark.createDataFrame(Seq((42, "foo"))).toDF("number", "value").repartition(1)
+    val lineEnding = "\r\n"
     df.write
       .option("rowTag", "ROW")
       .option("rootTag", "root")
-      .option("lineEnding", "\r\n")
+      .option("lineEnding", lineEnding)
       .xml(xmlPath.toString)
 
     val xmlFile =
       Files.list(xmlPath).iterator.asScala.filter(_.getFileName.toString.startsWith("part-")).next()
     val source = Source.fromFile(xmlFile.toFile)
     val content = source.mkString
-    val newLinesFound = "\n".r.findAllIn(content).length
-    assert(newLinesFound > 0)
-    assert("\r".r.findAllIn(content).length === newLinesFound)
+    val lineEndingsFound = lineEnding.r.findAllIn(content).length
+    assert(lineEndingsFound > 0)
+    lineEnding.foreach { c =>
+      assert(lineEndingsFound === c.toString.r.findAllIn(content).length)
+    }
   }
 
   test("rootTag with simple attributes") {
