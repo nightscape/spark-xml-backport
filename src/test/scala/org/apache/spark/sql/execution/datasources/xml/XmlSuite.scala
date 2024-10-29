@@ -1583,16 +1583,21 @@ class XmlSuite extends QueryTest with SharedSparkSession with CommonFileDataSour
   test("rootTag with simple attributes") {
     val xmlPath = getEmptyTempDir().resolve("simple_attributes")
     val df = spark.createDataFrame(Seq((42, "foo"))).toDF("number", "value").repartition(1)
-    df.write
-      .option("rowTag", "ROW")
-      .option("rootTag", "root foo='bar' bing=\"baz\"")
-      .option("declaration", "")
-      .xml(xmlPath.toString)
+    def testRootTag(rootTag: String): Unit = {
+      df.write
+        .option("rowTag", "ROW")
+        .option("rootTag", rootTag)
+        .option("declaration", "")
+        .mode(SaveMode.Overwrite)
+        .xml(xmlPath.toString)
 
-    val xmlFile =
-      Files.list(xmlPath).iterator.asScala.filter(_.getFileName.toString.startsWith("part-")).next()
-    val firstLine = getLines(xmlFile).head
-    assert(firstLine === "<root foo=\"bar\" bing=\"baz\">")
+      val xmlFile =
+        Files.list(xmlPath).iterator.asScala.filter(_.getFileName.toString.startsWith("part-")).next()
+      val firstLine = getLines(xmlFile).head
+      assert(firstLine === s"<${rootTag.replaceAll("'", "\"")}>")
+    }
+    testRootTag("root foo='bar' bing=\"baz\"")
+    testRootTag("root bing='baz' foo=\"bar\"")
   }
 
   test("rootTag with namespaced attributes") {
