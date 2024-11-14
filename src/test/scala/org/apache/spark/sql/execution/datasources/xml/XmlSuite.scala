@@ -68,6 +68,7 @@ class XmlSuite extends QueryTest with SharedSparkSession with CommonFileDataSour
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
+    spark.sparkContext.setLogLevel("ERROR")
     tempDir = Files.createTempDirectory("XmlSuite")
     tempDir.toFile.deleteOnExit()
   }
@@ -1603,7 +1604,7 @@ class XmlSuite extends QueryTest with SharedSparkSession with CommonFileDataSour
   test("rootTag with namespaced attributes") {
     val xmlPath = getEmptyTempDir().resolve("simple_attributes")
     val df = spark.createDataFrame(Seq((42, "foo"))).toDF("number", "value").repartition(1)
-    val rootTag = """root xmlns:myns="http://www.example.com/myns/" myns:foo="bar""""
+    val rootTag = """myns:root xmlns:myns="http://www.example.com/myns/" myns:foo="bar""""
     df.write
       .option("rowTag", "ROW")
       .option("rootTag", rootTag)
