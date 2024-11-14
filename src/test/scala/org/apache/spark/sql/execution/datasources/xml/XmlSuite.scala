@@ -3211,6 +3211,34 @@ class XmlSuite extends QueryTest with SharedSparkSession with CommonFileDataSour
     checkValidation("field name with space", "Illegal name character ' '")
     checkValidation("field", "", false)
   }
+  test("XML prefix tags") {
+    val data = Seq(Row("Random String"))
+    val df = spark.createDataFrame(data.asJava, StructType(Seq(StructField("ns3:field", StringType))))
+    withTempDir { dir =>
+      val path = dir.getCanonicalPath
+      val namespace = "xmlns:ns3=\"urn:iso:std:iso:20022:tech:xsd:auth.017.001.02\""
+      df.write
+        .option("rowTag", "ns3:ROW")
+        .option("rootTag", s"ns3:root $namespace")
+        .option("declaration", "")
+        .option("indent", "")
+        .mode(SaveMode.Overwrite)
+        .xml(path)
+      // read file back and check its content
+      val xmlFile = new File(path)
+        .listFiles()
+        .filter(_.isFile)
+        .filter(_.getName.endsWith("xml"))
+        .head
+      val actualContent = scala.io.Source.fromFile(xmlFile).mkString
+      val expectedContent =
+        s"""<ns3:root $namespace>
+           |<ns3:ROW><ns3:field>${data.head.getString(0)}</ns3:field></ns3:ROW>
+           |</ns3:root>""".stripMargin
+
+      assert(actualContent === expectedContent)
+    }
+  }
 
   test("SPARK-46355: Check Number of open files") {
     withSQLConf("fs.file.impl" -> classOf[XmlSuiteDebugFileSystem].getName, "fs.file.impl.disable.cache" -> "true") {

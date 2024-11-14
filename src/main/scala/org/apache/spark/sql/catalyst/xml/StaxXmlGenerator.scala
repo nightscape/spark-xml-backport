@@ -66,43 +66,45 @@ class StaxXmlGenerator(schema: StructType, writer: Writer, options: XmlOptions, 
       xmlWriter
     }
   }
+  // Allow a root tag to be like "rootTag foo='bar'"
+  // This is hacky; won't deal correctly with spaces in attributes, but want
+  // to make this at least work for simple cases without much complication
+  val rootTagTokens = options.rootTag.split(" ")
+  val rootAttributes: Map[String, String] =
+    if (rootTagTokens.length > 1) {
+      rootTagTokens.tail.map { kv =>
+        val Array(k, v) = kv.split("=")
+        k -> v.replaceAll("['\"]", "")
+      }.toMap
+    } else {
+      Map.empty
+    }
+  val metaNamespace = "xmlns:"
+  val (namespaceAttributes, normalAttributes) = rootAttributes.partition { case (k, _) =>
+    k.startsWith(metaNamespace)
+  }
+  val namespaces = namespaceAttributes.collect { case (k, v) => k.substring(metaNamespace.length) -> v }
+  gen.setNamespaceContext(new SimpleNamespaceContext(namespaces))
 
   private var rootElementWritten: Boolean = false
   def writeLineEnding(indentDisabled: Boolean = this.indentDisabled): Unit = {
     gen.writeCharacters(options.lineEnding)
   }
-  def writeDeclaration(): Unit = {
-    // Allow a root tag to be like "rootTag foo='bar'"
-    // This is hacky; won't deal correctly with spaces in attributes, but want
-    // to make this at least work for simple cases without much complication
-    val rootTagTokens = options.rootTag.split(" ")
-    val rootElementName = rootTagTokens.head
-    val rootAttributes: Map[String, String] =
-      if (rootTagTokens.length > 1) {
-        rootTagTokens.tail.map { kv =>
-          val Array(k, v) = kv.split("=")
-          k -> v.replaceAll("['\"]", "")
-        }.toMap
-      } else {
-        Map.empty
-      }
-    val declaration = options.declaration
-    if (declaration != null && declaration.nonEmpty) {
-      gen.writeProcessingInstruction("xml", declaration)
-      writeLineEnding(indentDisabled = false)
-    }
-    val metaNamespace = "xmlns:"
-    val (namespaceAttributes, normalAttributes) = rootAttributes.partition { case (k, _) =>
-      k.startsWith(metaNamespace)
-    }
-    val namespaces = namespaceAttributes.collect { case (k, v) => k.substring(metaNamespace.length) -> v }
-    gen.setNamespaceContext(new SimpleNamespaceContext(namespaces))
-    rootElementName.split(":") match {
+  def writeStartElement(elementName: String): Unit =
+    elementName.split(":") match {
       case Array(prefix, local) =>
         gen.writeStartElement(prefix, local, namespaces(prefix))
       case Array(local) =>
         gen.writeStartElement(local)
     }
+
+  def writeDeclaration(): Unit = {
+    if (options.declaration != null && options.declaration.nonEmpty) {
+      gen.writeProcessingInstruction("xml", options.declaration)
+      writeLineEnding(indentDisabled = false)
+    }
+    val rootElementName = rootTagTokens.head
+    writeStartElement(rootElementName)
     namespaces.foreach { case (k, v) =>
       gen.writeNamespace(k, v)
     }
@@ -147,7 +149,7 @@ class StaxXmlGenerator(schema: StructType, writer: Writer, options: XmlOptions, 
     case ("", _, _) =>
       writeElement(dt, v, options)
     case (_, _, _) =>
-      gen.writeStartElement(name)
+      writeStartElement(name)
       writeElement(dt, v, options)
       gen.writeEndElement()
   }
