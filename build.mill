@@ -7,7 +7,7 @@ import mill.define.Cross.Resolver
 import mill.scalalib.Assembly._
 import $ivy.`com.lihaoyi::mill-contrib-buildinfo:`
 import mill.contrib.buildinfo.BuildInfo
-import $ivy.`io.chris-kipp::mill-ci-release::0.1.10`
+import $ivy.`io.chris-kipp::mill-ci-release_mill0.12:0.2.1`
 import io.kipp.mill.ci.release.CiReleaseModule
 import de.tobiasroeser.mill.vcs.version.VcsVersion
 
@@ -42,7 +42,7 @@ trait SparkXmlBackportModule
     versionControl = VersionControl(browsableRepository = Some(url), connection = Some(s"scm:git:$url.git")),
     developers = Seq(Developer("nightscape", "Martin Mauch", "https://github.com/nightscape"))
   )
-  object test extends ScalaTests with SbtModuleTests with TestModule.ScalaTest {
+  object test extends ScalaTests with SbtTests with TestModule.ScalaTest {
     override def ivyDeps = Agg(
       ivy"org.scalatest::scalatest:3.2.19",
       ivy"org.scalatestplus::scalacheck-1-18:3.2.19.0",
